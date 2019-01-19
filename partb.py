@@ -89,20 +89,119 @@ def getBins(rankingPairs):
     return groups
 
 
+class RandomClickModel:
+    '''Class for Random Click Model.
+    '''
+
+    def __init__(self, docPerPage):
+        self.docPerPage = docPerPage
+
+    def estimateRho(self, clickLog):
+        '''Estimate the probability of random click.
+
+        Arguments:
+            clickLog {string} -- path to the log file
+
+        '''
+
+        q = 0
+        c = 0
+        with open(clickLog) as log:
+            for line in log:
+                tmp = line.split()
+                if 'Q' in tmp:
+                    q += 1
+                elif 'C' in tmp:
+                    c += 1
+        self.rho = c / (q * self.docPerPage)
+
+    def simulate(self, int_res):
+        '''One user click simulation with RCM.
+
+        Arguments:
+            int_res {list or ndarray} -- interleaved result
+
+        Returns:
+            int -- result of comparison between E and P (win, tie, lose)
+        '''
+
+        if type(int_res) == list:
+            int_len = len(int_res)
+        elif type(int_res) == np.ndarray:
+            int_len = int_res.shape[0]
+            int_res = int_res.reshape(int_len, -1)
+
+        P = 0
+        E = 0
+        for i in np.arange(int_len):
+            if np.random.rand(1) < self.rho:
+                if int_res[i] == 0:
+                    P += 1
+                else:
+                    E += 1
+        if E > P:
+            return 1
+        elif E == P:
+            return 0
+        else:
+            return -1
+
+    def computeSampleSize(self, alpha, beta, p0, repetition, int_res):
+        '''Compute the sample size for the interleaving result (DERR).
+
+        Arguments:
+            alpha {float} -- Type I error rate
+            beta {float} -- Type II error rate
+            p0 {float} -- proportion for comparison
+            repetition {int} -- number of repetitions for user click simulation
+            int_res {list or ndarray} -- interleaved result
+
+        Returns:
+            int -- computed sample size
+        '''
+
+        P = 0
+        E = 0
+        for _ in np.arange(repetition):
+            if self.simulate(int_res) == 1:
+                E += 1
+            else:
+                P += 1
+
+        p1 = E / (E + P)
+        delta = np.abs(p1 - p0)
+        z_alpha = 1 / np.sqrt(2 * np.pi) * np.exp(-0.5 * (1 - alpha) ** 2)
+        z_beta = 1 / np.sqrt(2 * np.pi) * np.exp(-0.5 * (1 - beta) ** 2)
+        N = ((z_alpha * np.sqrt(p0 * (1 - p0)) + z_beta * np.sqrt(p1 * (1 - p1))) / delta) ** 2 + 1 / delta
+        return np.ceil(N)
+
+
 def main():
     DEBUG = True
     k = 3
     max_rel = 1
+    docPerPage = 10
+    clickLog = './YandexRelPredChallenge.txt'
+    alpha = 0.05
+    beta = 0.1
+    p0 = 0.5
+    repetition = 100
+
     rels = np.arange(max_rel + 1)
     combinations = np.array(np.meshgrid(rels, rels, rels)).T.reshape(-1, 3)
     combinations = appendERR(combinations, k, max_rel)
     rankingPairs = getRankingPairs(combinations, k)
-
     groups = getBins(rankingPairs)
 
     if DEBUG:
         for i in np.arange(len(groups)):
             print('Group {} has {} pairs.'.format(i + 1, len(groups[i])))
+
+        rcm = RandomClickModel(docPerPage)
+        rcm.estimateRho(clickLog)
+        int_res = [1, 0, 0, 0, 0, 1, 0, 0, 1, 0]
+        N = rcm.computeSampleSize(alpha, beta, p0, repetition, int_res)
+        print(N)
 
 
 if __name__ == "__main__":
