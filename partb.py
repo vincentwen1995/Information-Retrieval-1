@@ -24,11 +24,12 @@ def appendERR(combinations, k, max_rel):
                 ERR += (1 - thetas[comb, 0]) * thetas[comb, 1] / (r + 1)
             else:
                 tmp = thetas[comb, r]
-                for i in np.arange(r - 1):
+                for i in np.arange(r):
                     tmp *= 1 - thetas[comb, i]
                 ERR += tmp / (r + 1)
         ERRs[comb] = ERR
     ERRs = np.reshape(ERRs, (thetas.shape[0], -1))
+    # print(ERRs)
     return np.hstack((combinations, ERRs))
 
 
