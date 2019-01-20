@@ -6,14 +6,14 @@ def appendERR(combinations, k, max_rel):
     '''Compute ERRs for the combinations and append it as a column.
 
     Arguments:
-        combinations {ndarray} -- combinations of rankings of relevance
+        combinations {ndarray} -- combinations of rankings of relevance, pattern: [0, 1, 0, 4(docID)]
         k {int} -- cut-off rank
         max_rel {int} -- highest grade for relevance
 
     Returns:
         ndarray -- combinations horizontally appended with their respective ERRs
     '''
-    thetas = (np.power(2, combinations) - 1) / 2 ** max_rel
+    thetas = (np.power(2, combinations[:, :3]) - 1) / 2 ** max_rel
     ERRs = np.empty(shape=(thetas.shape[0]), dtype=np.float32)
     for comb in np.arange(thetas.shape[0]):
         ERR = 0
@@ -37,7 +37,7 @@ def getRankingPairs(combinations, k):
     '''Generate all the valid ranking pairs (E outperforms P)
 
     Arguments:
-        combinations {ndarray} -- combinations of rankings of relevance
+        combinations {ndarray} -- combinations of rankings of relevance, pattern: [0, 1, 0, 4(docID), 0.6(ERR)]
         k {int} -- cut-off rank
 
     Returns:
@@ -47,12 +47,14 @@ def getRankingPairs(combinations, k):
     rankingPairs = []
     for P_ind in np.arange(combinations.shape[0]):
         for E_ind in np.arange(combinations.shape[0]):
-            DERR = combinations[E_ind, k] - combinations[P_ind, k]
+            DERR = combinations[E_ind, -1] - combinations[P_ind, -1]
             if DERR > 0:
                 rankingPairs.append(dict())
                 tmp_pair = rankingPairs[-1]
                 tmp_pair["P"] = combinations[P_ind, 0:k]
+                tmp_pair["P_docID"] = combinations[P_ind, 3]
                 tmp_pair["E"] = combinations[E_ind, 0:k]
+                tmp_pair["E_docID"] = combinations[E_ind, 3]
                 tmp_pair["DERR"] = DERR
     return rankingPairs
 
@@ -186,9 +188,11 @@ def main():
     beta = 0.1
     p0 = 0.5
     repetition = 100
+    docs = 6
 
+    docIDs = np.arange(docs)
     rels = np.arange(max_rel + 1)
-    combinations = np.array(np.meshgrid(rels, rels, rels)).T.reshape(-1, 3)
+    combinations = np.array(np.meshgrid(rels, rels, rels, docIDs)).T.reshape(-1, 4)
     combinations = appendERR(combinations, k, max_rel)
     rankingPairs = getRankingPairs(combinations, k)
     groups = getBins(rankingPairs)
@@ -196,7 +200,7 @@ def main():
     if DEBUG:
         for i in np.arange(len(groups)):
             print('Group {} has {} pairs.'.format(i + 1, len(groups[i])))
-
+        print(groups[0][4])
         rcm = RandomClickModel(docPerPage)
         rcm.estimateRho(clickLog)
         int_res = [1, 0, 0, 0, 0, 1, 0, 0, 1, 0]
