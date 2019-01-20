@@ -165,9 +165,10 @@ class RandomClickModel:
         P = 0
         E = 0
         for _ in np.arange(repetition):
-            if self.simulate(int_res) == 1:
+            sim_res = self.simulate(int_res)
+            if sim_res == 1:
                 E += 1
-            else:
+            elif sim_res == -1:
                 P += 1
 
         p1 = E / (E + P)
@@ -203,7 +204,7 @@ def main():
         print(groups[0][4])
         rcm = RandomClickModel(docPerPage)
         rcm.estimateRho(clickLog)
-        int_res = [1, 0, 0, 0, 0, 1, 0, 0, 1, 0]
+        int_res = [1, 1, 0, 0, 1, 1, 0, 1, 1, 0]
         N = rcm.computeSampleSize(alpha, beta, p0, repetition, int_res)
         print(N)
 
