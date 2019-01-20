@@ -1,5 +1,6 @@
 from itertools import permutations
 import numpy as np
+import random as rn
 
 
 def getCombinations(docs, k):
@@ -51,7 +52,6 @@ def appendERR(combinations, k, max_rel):
                 ERR += tmp / (r + 1)
         ERRs[comb] = ERR
     ERRs = np.reshape(ERRs, (thetas.shape[0], -1))
-    # print(ERRs)
     return np.hstack((combinations, ERRs))
 
 
@@ -111,6 +111,68 @@ def getBins(rankingPairs):
         elif (rankingPair["DERR"] <= 0.95) and (rankingPair["DERR"] > 0.9):
             groups[9].append(rankingPair)
     return groups
+
+
+def teamDraftInterleave(rankP, rankE, docP, docE):
+    P = rankP.tolist()
+    E = rankE.tolist()
+    dP = docP.tolist()
+    dE = docE.tolist()
+    interleaved = []
+    docIDs = []
+    while len(interleaved) < 3:
+        order = rn.random()
+        if order > 0.5: # P goes first
+            if P:
+                while dP[0] in docIDs:
+                    P.pop(0)
+                    dP.pop(0)
+                    if not P:
+                        break
+                if P:
+                    interleaved.append(str(P[0])+'P')
+                    docIDs.append(dP[0])
+                    P.pop(0)
+                    dP.pop(0)
+            if E:
+                if len(interleaved) == 3:
+                    break
+                while dE[0] in docIDs:
+                    E.pop(0)
+                    dE.pop(0)
+                    if not E:
+                        break
+                if E:
+                    interleaved.append(str(E[0])+'E')
+                    docIDs.append(dE[0])
+                    E.pop(0)
+                    dE.pop(0)
+        else: # E goes first
+            if E: 
+                while dE[0] in docIDs:
+                    E.pop(0)
+                    dE.pop(0)
+                    if not E:
+                        break
+                if E:
+                    interleaved.append(str(E[0])+'E')
+                    docIDs.append(dE[0])
+                    E.pop(0)
+                    dE.pop(0)
+            if P:
+                if len(interleaved) == 3:
+                    break
+                while dP[0] in docIDs:
+                    P.pop(0)
+                    dP.pop(0)
+                    if not P:
+                        break
+                if P:
+                    interleaved.append(str(P[0])+'P')
+                    docIDs.append(dP[0])
+                    P.pop(0)
+                    dP.pop(0)
+    return interleaved
 
 
 class RandomClickModel:
@@ -220,11 +282,17 @@ def main():
     combinations = appendERR(combinations, k, max_rel)
     rankingPairs = getRankingPairs(combinations, k)
     groups = getBins(rankingPairs)
-
+    
+    
     if DEBUG:
+        count = 0
         for i in np.arange(len(groups)):
             print('Group {} has {} pairs.'.format(i + 1, len(groups[i])))
-        print(groups[0][4])
+            count += len(groups[i])
+        print("In total {} pairs:".format(count))
+        print("Example pair:", groups[0][4])
+        interleaved = teamDraftInterleave(groups[0][4].get('P'), groups[0][4].get('E'), groups[0][4].get('P_docID'), groups[0][4].get('E_docID'))
+        print("Example interleaved result:", interleaved)
         print(combinations.shape)
         rcm = RandomClickModel(docPerPage)
         rcm.estimateRho(clickLog)
