@@ -115,13 +115,13 @@ def getBins(rankingPairs):
 
 
 def teamDraftInterleave(rankP, rankE, docP, docE):
-    '''Interleave the ranking pairs for online evaluation.
+    '''Interleave the ranking pairs for online evaluation with team draft method.
 
     Arguments:
-        rankP {ndarray} -- 
-        rankE {ndarray} -- 
-        docP {ndarray} -- 
-        docE {ndarray} -- 
+        rankP {ndarray} -- rank of P
+        rankE {ndarray} -- rank of E
+        docP {ndarray} -- docID of P
+        docE {ndarray} -- docID of E
 
     Returns:
         list -- interleaved result, pattern: ['0.0P' '1.0E' '0.0E']
@@ -143,7 +143,7 @@ def teamDraftInterleave(rankP, rankE, docP, docE):
                     if not P:
                         break
                 if P:
-                    interleavedList.append(str(P[0])+'P')
+                    interleavedList.append(str(P[0]) + 'P')
                     docIDs.append(dP[0])
                     P.pop(0)
                     dP.pop(0)
@@ -156,7 +156,7 @@ def teamDraftInterleave(rankP, rankE, docP, docE):
                     if not E:
                         break
                 if E:
-                    interleavedList.append(str(E[0])+'E')
+                    interleavedList.append(str(E[0]) + 'E')
                     docIDs.append(dE[0])
                     E.pop(0)
                     dE.pop(0)
@@ -168,7 +168,7 @@ def teamDraftInterleave(rankP, rankE, docP, docE):
                     if not E:
                         break
                 if E:
-                    interleavedList.append(str(E[0])+'E')
+                    interleavedList.append(str(E[0]) + 'E')
                     docIDs.append(dE[0])
                     E.pop(0)
                     dE.pop(0)
@@ -181,7 +181,7 @@ def teamDraftInterleave(rankP, rankE, docP, docE):
                     if not P:
                         break
                 if P:
-                    interleavedList.append(str(P[0])+'P')
+                    interleavedList.append(str(P[0]) + 'P')
                     docIDs.append(dP[0])
                     P.pop(0)
                     dP.pop(0)
@@ -189,6 +189,15 @@ def teamDraftInterleave(rankP, rankE, docP, docE):
 
 
 def computeProbDist(listLength):
+    '''[summary]
+
+    Arguments:
+        listLength {[type]} -- [description]
+
+    Returns:
+        [type] -- [description]
+    '''
+
     tau = 3
     denominator = 0
     probList = []
@@ -201,7 +210,20 @@ def computeProbDist(listLength):
         probList[index] = round(item, 2)
     return probList
 
+
 def probInterleave(rankP, rankE, docP, docE):
+    '''Interleave the ranking pairs for online evaluation with probabilistic method.
+
+    Arguments:
+        rankP {ndarray} -- rank of P
+        rankE {ndarray} -- rank of E
+        docP {ndarray} -- docID of P
+        docE {ndarray} -- docID of E
+
+    Returns:
+        list -- interleaved result, pattern: ['0.0P' '1.0E' '0.0E']
+    '''
+
     P = rankP.tolist()
     E = rankE.tolist()
     dP = docP.tolist()
@@ -218,9 +240,9 @@ def probInterleave(rankP, rankE, docP, docE):
                 for index in range(len(probDistP)):
                     temp += probDistP[index]
                     if pick < temp:
-                        interleavedList.append(str(P[index])+'P')
+                        interleavedList.append(str(P[index]) + 'P')
                         if dP[index] in dE:
-                            tIndex =  dE.index(dP[index])
+                            tIndex = dE.index(dP[index])
                             E.pop(tIndex)
                             dE.pop(tIndex)
                             probDistE = computeProbDist(len(E))
@@ -228,7 +250,7 @@ def probInterleave(rankP, rankE, docP, docE):
                         dP.pop(index)
                         probDistP = computeProbDist(len(P))
                         break
-                        
+
         else:  # E picks
             if E:
                 pick = rn.random()
@@ -236,7 +258,7 @@ def probInterleave(rankP, rankE, docP, docE):
                 for index in range(len(probDistE)):
                     temp += probDistE[index]
                     if pick < temp:
-                        interleavedList.append(str(E[index])+'E')
+                        interleavedList.append(str(E[index]) + 'E')
                         if dE[index] in dP:
                             tIndex = dP.index(dE[index])
                             P.pop(tIndex)
@@ -359,13 +381,15 @@ def getStatistics(groups, clickModel, alpha=0.05, beta=0.1, p0=0.5, repetition=5
 
     groupStatistics = []
     for group in groups:
-        tmpN = np.empty(shape=(len(group)), dtype=np.float32)
-        for i, pair in enumerate(group):
+        # tmpN = np.empty(shape=(len(group)), dtype=np.float32)
+        tmpN = []
+        for pair in group:
             int_res = teamDraftInterleave(pair['P'], pair['E'], pair['P_docID'], pair['E_docID'])
             N = clickModel.computeSampleSize(alpha, beta, p0, repetition, int_res)
             if N == 0.0:
                 continue
-            tmpN[i] = N
+            tmpN.append(N)
+        tmpN = np.array(tmpN)
         groupStatistics.append(dict())
         tmp = groupStatistics[-1]
         if len(group) == 0:
