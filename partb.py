@@ -192,10 +192,10 @@ def computeProbDist(listLength):
     '''[summary]
 
     Arguments:
-        listLength {[type]} -- [description]
+        listLength {int} -- length of ranking result
 
     Returns:
-        [type] -- [description]
+        list -- list containing probabilities of each rank to be sampled
     '''
 
     tau = 3
