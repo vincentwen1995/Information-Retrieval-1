@@ -1,4 +1,5 @@
 from itertools import permutations
+from time import time
 import numpy as np
 import random as rn
 
@@ -114,6 +115,18 @@ def getBins(rankingPairs):
 
 
 def teamDraftInterleave(rankP, rankE, docP, docE):
+    '''Interleave the ranking pairs for online evaluation.
+
+    Arguments:
+        rankP {ndarray} -- 
+        rankE {ndarray} -- 
+        docP {ndarray} -- 
+        docE {ndarray} -- 
+
+    Returns:
+        list -- interleaved result, pattern: ['0.0P' '1.0E' '0.0E']
+    '''
+
     P = rankP.tolist()
     E = rankE.tolist()
     dP = docP.tolist()
@@ -122,7 +135,7 @@ def teamDraftInterleave(rankP, rankE, docP, docE):
     docIDs = []
     while len(interleaved) < 3:
         order = rn.random()
-        if order > 0.5: # P goes first
+        if order > 0.5:  # P goes first
             if P:
                 while dP[0] in docIDs:
                     P.pop(0)
@@ -147,8 +160,8 @@ def teamDraftInterleave(rankP, rankE, docP, docE):
                     docIDs.append(dE[0])
                     E.pop(0)
                     dE.pop(0)
-        else: # E goes first
-            if E: 
+        else:  # E goes first
+            if E:
                 while dE[0] in docIDs:
                     E.pop(0)
                     dE.pop(0)
@@ -182,7 +195,7 @@ class RandomClickModel:
     def __init__(self, docPerPage):
         self.docPerPage = docPerPage
 
-    def estimateRho(self, clickLog):
+    def estimateParameters(self, clickLog):
         '''Estimate the probability of random click.
 
         Arguments:
@@ -221,7 +234,7 @@ class RandomClickModel:
         E = 0
         for i in np.arange(int_len):
             if np.random.rand(1) < self.rho:
-                if int_res[i] == 0:
+                if 'P' in int_res[i]:
                     P += 1
                 else:
                     E += 1
@@ -259,8 +272,52 @@ class RandomClickModel:
         delta = np.abs(p1 - p0)
         z_alpha = 1 / np.sqrt(2 * np.pi) * np.exp(-0.5 * (1 - alpha) ** 2)
         z_beta = 1 / np.sqrt(2 * np.pi) * np.exp(-0.5 * (1 - beta) ** 2)
-        N = ((z_alpha * np.sqrt(p0 * (1 - p0)) + z_beta * np.sqrt(p1 * (1 - p1))) / delta) ** 2 + 1 / delta
+        if delta == 0.0:
+            N = 0
+        else:
+            N = ((z_alpha * np.sqrt(p0 * (1 - p0)) + z_beta * np.sqrt(p1 * (1 - p1))) / delta) ** 2 + 1 / delta
         return np.ceil(N)
+
+
+def getStatistics(groups, clickModel, alpha=0.05, beta=0.1, p0=0.5, repetition=50):
+    '''Calculate statistics for each groups of ranking pairs.
+
+    Arguments:
+        groups {list} -- list of groups
+        clickModel {RandomClickModel or PositionBasedModel} -- instance of either click model
+
+    Keyword Arguments:
+        alpha {float} -- Type I error rate (default: {0.05})
+        beta {float} -- Type II error rate (default: {0.1})
+        p0 {float} -- comparison proportion (default: {0.5})
+        repetition {int} -- number of repetitions (default: {50})
+
+    Returns:
+        list -- list of dictionaries containing statistics for each group
+    '''
+
+    groupStatistics = []
+    for group in groups:
+        tmpN = np.empty(shape=(len(group)), dtype=np.float32)
+        for i, pair in enumerate(group):
+            int_res = teamDraftInterleave(pair['P'], pair['E'], pair['P_docID'], pair['E_docID'])
+            N = clickModel.computeSampleSize(alpha, beta, p0, repetition, int_res)
+            if N == 0.0:
+                continue
+            tmpN[i] = N
+        groupStatistics.append(dict())
+        tmp = groupStatistics[-1]
+        if len(group) == 0:
+            tmp['min'] = 'Nan'
+            tmp['max'] = 'Nan'
+            tmp['mean'] = 'Nan'
+            tmp['median'] = 'Nan'
+        else:
+            tmp['min'] = np.min(tmpN)
+            tmp['max'] = np.max(tmpN)
+            tmp['mean'] = np.mean(tmpN)
+            tmp['median'] = np.median(tmpN)
+    return groupStatistics
 
 
 def main():
@@ -272,7 +329,7 @@ def main():
     alpha = 0.05
     beta = 0.1
     p0 = 0.5
-    repetition = 100
+    repetition = 50
     docs = 6
 
     # docIDs = np.arange(docs)
@@ -282,8 +339,7 @@ def main():
     combinations = appendERR(combinations, k, max_rel)
     rankingPairs = getRankingPairs(combinations, k)
     groups = getBins(rankingPairs)
-    
-    
+
     if DEBUG:
         count = 0
         for i in np.arange(len(groups)):
@@ -294,11 +350,14 @@ def main():
         interleaved = teamDraftInterleave(groups[0][4].get('P'), groups[0][4].get('E'), groups[0][4].get('P_docID'), groups[0][4].get('E_docID'))
         print("Example interleaved result:", interleaved)
         print(combinations.shape)
-        rcm = RandomClickModel(docPerPage)
-        rcm.estimateRho(clickLog)
-        int_res = [1, 1, 0, 0, 1, 1, 0, 1, 1, 0]
-        N = rcm.computeSampleSize(alpha, beta, p0, repetition, int_res)
-        print(N)
+    start = time()
+    print('Random Click Model: ')
+    rcm = RandomClickModel(docPerPage)
+    rcm.estimateParameters(clickLog)
+    groupStatistics = getStatistics(groups, rcm)
+    print('Group statistics: ')
+    print(groupStatistics)
+    print('Time elapsed: {:.3f}s'.format(time() - start))
 
 
 if __name__ == "__main__":
