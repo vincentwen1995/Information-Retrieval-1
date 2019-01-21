@@ -131,9 +131,9 @@ def teamDraftInterleave(rankP, rankE, docP, docE):
     E = rankE.tolist()
     dP = docP.tolist()
     dE = docE.tolist()
-    interleaved = []
+    interleavedList = []
     docIDs = []
-    while len(interleaved) < 3:
+    while len(interleavedList) < 3:
         order = rn.random()
         if order > 0.5:  # P goes first
             if P:
@@ -143,12 +143,12 @@ def teamDraftInterleave(rankP, rankE, docP, docE):
                     if not P:
                         break
                 if P:
-                    interleaved.append(str(P[0])+'P')
+                    interleavedList.append(str(P[0])+'P')
                     docIDs.append(dP[0])
                     P.pop(0)
                     dP.pop(0)
             if E:
-                if len(interleaved) == 3:
+                if len(interleavedList) == 3:
                     break
                 while dE[0] in docIDs:
                     E.pop(0)
@@ -156,7 +156,7 @@ def teamDraftInterleave(rankP, rankE, docP, docE):
                     if not E:
                         break
                 if E:
-                    interleaved.append(str(E[0])+'E')
+                    interleavedList.append(str(E[0])+'E')
                     docIDs.append(dE[0])
                     E.pop(0)
                     dE.pop(0)
@@ -168,12 +168,12 @@ def teamDraftInterleave(rankP, rankE, docP, docE):
                     if not E:
                         break
                 if E:
-                    interleaved.append(str(E[0])+'E')
+                    interleavedList.append(str(E[0])+'E')
                     docIDs.append(dE[0])
                     E.pop(0)
                     dE.pop(0)
             if P:
-                if len(interleaved) == 3:
+                if len(interleavedList) == 3:
                     break
                 while dP[0] in docIDs:
                     P.pop(0)
@@ -181,11 +181,72 @@ def teamDraftInterleave(rankP, rankE, docP, docE):
                     if not P:
                         break
                 if P:
-                    interleaved.append(str(P[0])+'P')
+                    interleavedList.append(str(P[0])+'P')
                     docIDs.append(dP[0])
                     P.pop(0)
                     dP.pop(0)
-    return interleaved
+    return interleavedList
+
+
+def computeProbDist(listLength):
+    tau = 3
+    denominator = 0
+    probList = []
+    for index in range(listLength):
+        rank = index + 1
+        probList.append(1 / np.power(rank, tau))
+        denominator += 1 / np.power(rank, tau)
+    for index, item in enumerate(probList):
+        item /= denominator
+        probList[index] = round(item, 2)
+    return probList
+
+def probInterleave(rankP, rankE, docP, docE):
+    P = rankP.tolist()
+    E = rankE.tolist()
+    dP = docP.tolist()
+    dE = docE.tolist()
+    interleavedList = []
+    probDistP = computeProbDist(len(P))
+    probDistE = computeProbDist(len(E))
+    while len(interleavedList) < 3:
+        turn = rn.random()
+        if turn > 0.5: # P picks
+            if P:
+                pick = rn.random()
+                temp = 0
+                for index in range(len(probDistP)):
+                    temp += probDistP[index]
+                    if pick < temp:
+                        interleavedList.append(str(P[index])+'P')
+                        if dP[index] in dE:
+                            tIndex =  dE.index(dP[index])
+                            E.pop(tIndex)
+                            dE.pop(tIndex)
+                            probDistE = computeProbDist(len(E))
+                        P.pop(index)
+                        dP.pop(index)
+                        probDistP = computeProbDist(len(P))
+                        break
+                        
+        else: # E picks
+            if E:
+                pick = rn.random()
+                temp = 0
+                for index in range(len(probDistE)):
+                    temp += probDistE[index]
+                    if pick < temp:
+                        interleavedList.append(str(E[index])+'E')
+                        if dE[index] in dP:
+                            tIndex = dP.index(dE[index])
+                            P.pop(tIndex)
+                            dP.pop(tIndex)
+                            probDistP = computeProbDist(len(P))
+                        E.pop(index)
+                        dE.pop(index)
+                        probDistE = computeProbDist(len(E))
+                        break
+    return interleavedList
 
 
 class RandomClickModel:
@@ -347,8 +408,10 @@ def main():
             count += len(groups[i])
         print("In total {} pairs:".format(count))
         print("Example pair:", groups[0][4])
-        interleaved = teamDraftInterleave(groups[0][4].get('P'), groups[0][4].get('E'), groups[0][4].get('P_docID'), groups[0][4].get('E_docID'))
-        print("Example interleaved result:", interleaved)
+        testTDI = teamDraftInterleave(groups[0][4].get('P'), groups[0][4].get('E'), groups[0][4].get('P_docID'), groups[0][4].get('E_docID'))
+        print("Interleaved result with TeamDraftInterleaving:", testTDI)
+        testPI = probInterleave(groups[0][4].get('P'), groups[0][4].get('E'), groups[0][4].get('P_docID'), groups[0][4].get('E_docID'))
+        print("Interleaved result with ProbInterleaving:", testPI)
         print(combinations.shape)
     start = time()
     print('Random Click Model: ')
