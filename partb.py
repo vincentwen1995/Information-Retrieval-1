@@ -211,7 +211,7 @@ def probInterleave(rankP, rankE, docP, docE):
     probDistE = computeProbDist(len(E))
     while len(interleavedList) < 3:
         turn = rn.random()
-        if turn > 0.5: # P picks
+        if turn > 0.5:  # P picks
             if P:
                 pick = rn.random()
                 temp = 0
@@ -229,7 +229,7 @@ def probInterleave(rankP, rankE, docP, docE):
                         probDistP = computeProbDist(len(P))
                         break
                         
-        else: # E picks
+        else:  # E picks
             if E:
                 pick = rn.random()
                 temp = 0
