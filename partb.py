@@ -329,7 +329,7 @@ class RandomClickModel:
         else:
             return -1
 
-    def computeSampleSize(self, alpha, beta, p0, repetition, int_res):
+    def computeSampleSize(self, alpha, beta, p0, repetition, int_func, int_args):
         '''Compute the sample size for the interleaving result (DERR).
 
         Arguments:
@@ -337,8 +337,8 @@ class RandomClickModel:
             beta {float} -- Type II error rate
             p0 {float} -- proportion for comparison
             repetition {int} -- number of repetitions for user click simulation
-            int_res {list or ndarray} -- interleaved result
-
+            int_func {list or ndarray} -- interleaved function to use
+            int_args {tuple} -- arguments for interleaving function
         Returns:
             int -- computed sample size
         '''
@@ -346,6 +346,7 @@ class RandomClickModel:
         P = 0
         E = 0
         for _ in np.arange(repetition):
+            int_res = int_func(*int_args)
             sim_res = self.simulate(int_res)
             if sim_res == 1:
                 E += 1
