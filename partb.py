@@ -536,7 +536,7 @@ class PositionBasedModel:
         P = 0
         E = 0
         for i in np.arange(int_len):
-            rel = int_res[i]  # relevance
+            rel = int_res[i]
             if '1' in rel:
                 P_click = self.gamma[i] * (1 - epsilon)
                 if np.random.rand(1) < P_click:
@@ -668,19 +668,27 @@ def main():
         print("Interleaved result with ProbInterleaving:", testPI)
         print(combinations.shape)
     start = time()
-    # print('Random Click Model: ')
-    # rcm = RandomClickModel(docPerPage)
-    # rcm.estimateParameters(clickLog)
-    # groupStatistics = getStatistics(groups, rcm, 'teamdraft')
-    # print('Group statistics: ')
-    # print(groupStatistics)
+    print('Random Click Model: ')
+    print('Processing...')
+    rcm = RandomClickModel(docPerPage)
+    rcm.estimateParameters(clickLog)
+    groupStatisticsRCM = getStatistics(groups, rcm, 'teamdraft')
+    print('Done!')
+    print('Group statistics: ')
+    for i in np.arange(len(groupStatisticsRCM)):
+        print('Sample size estimation of group', i + 1, ':')
+        print(groupStatisticsRCM[i])
 
     print('Position Based Model: ')
+    print('Processing...')
     pbm = PositionBasedModel()
     pbm.learn_by_EM()
-    groupStatistics = getStatistics(groups, pbm, 'prob')
+    groupStatisticsPBM = getStatistics(groups, pbm, 'prob')
+    print('Done!')
     print('Group statistics: ')
-    print(groupStatistics)
+    for i in np.arange(len(groupStatisticsPBM)):
+        print('Sample size estimation of group', i + 1, ':')
+        print(groupStatisticsPBM[i])
     print('Time elapsed: {:.3f}s'.format(time() - start))
 
 
