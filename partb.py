@@ -361,6 +361,7 @@ class RandomClickModel:
             N = ((z_alpha * np.sqrt(p0 * (1 - p0)) + z_beta * np.sqrt(p1 * (1 - p1))) / delta) ** 2 + 1 / delta
         return np.ceil(N)
 
+
 class PositionBasedModel:
     '''Class for Position Based Model.
     '''
@@ -405,17 +406,17 @@ class PositionBasedModel:
             for line in f:
                 data.append(line.rstrip('\n').split('\t'))
 
-        for i in range(len(data)): # for every row in Yandex log
+        for i in range(len(data)):  # for every row in Yandex log
             record = data[i]
             action = record[2]
 
             # if the record is a query
             if action == "Q":
-                S[i] = [] # initialize session i
-                docs_last_q = [] # docs in the last query, for examining click
-                id_last_s = i # id of the last session, for examining click
+                S[i] = []  # initialize session i
+                docs_last_q = []  # docs in the last query, for examining click
+                id_last_s = i  # id of the last session, for examining click
 
-                for r in range(max_rank): # for rank from 1 until max_rank
+                for r in range(max_rank):  # for rank from 1 until max_rank
                     query_id = record[3]
                     doc_id = record[r+5]
                     key = (doc_id, query_id)
@@ -427,9 +428,9 @@ class PositionBasedModel:
 
                     # update S_uq
                     if key not in S_uq:
-                        S_uq[key] = [(rank,c_us)]
+                        S_uq[key] = [(rank, c_us)]
                     else:
-                        S_uq[key].append((rank,c_us))
+                        S_uq[key].append((rank, c_us))
 
                     # update S
                     S[i].append((key, c_us))
@@ -437,14 +438,14 @@ class PositionBasedModel:
             # if the record is a click
             else:
                 doc_id = record[-1]
-                key = (doc_id, query_id) # session of a click is the last query
+                key = (doc_id, query_id)  # session of a click is the last query
 
-                if doc_id in docs_last_q: # if the doc clicked is in the last query
-                    rank = S_uq[key][-1][0] # rank of the doc clicked in the last session
+                if doc_id in docs_last_q:  # if the doc clicked is in the last query
+                    rank = S_uq[key][-1][0]  # rank of the doc clicked in the last session
                     c_us = 1
 
                     # update S_uq
-                    S_uq[key][-1] = (rank,c_us)
+                    S_uq[key][-1] = (rank, c_us)
 
                     # update S
                     S[id_last_s][rank] = (key, c_us)
@@ -486,10 +487,10 @@ class PositionBasedModel:
 
             # update alpha
             for uq in all_uq:
-                s_uq = S_uq[uq] # retrieve all sessions s in S_uq
-                alpha_sum = 0 # for summation
+                s_uq = S_uq[uq]  # retrieve all sessions s in S_uq
+                alpha_sum = 0  # for summation
                 length_s_uq = len(s_uq)
-                for s in s_uq: # for every session s in S_uq
+                for s in s_uq:  # for every session s in S_uq
                     rank = s[0]
                     c_us = s[1]
                     alpha_sum += (c_us + (1 - c_us) * (1 - gamma_t[rank]) * alpha_t[uq] / (1 - gamma_t[rank] * alpha_t[uq]))
@@ -498,8 +499,8 @@ class PositionBasedModel:
             # update gamma
             length_S = len(S)
             for rank in range(max_rank):
-                gamma_sum = 0 # for summation
-                for i in S.keys(): # for every session s in S
+                gamma_sum = 0  # for summation
+                for i in S.keys():  # for every session s in S
                     s_i = S[i]
                     uq = s_i[rank][0]
                     c_us = s_i[rank][1]
@@ -516,7 +517,7 @@ class PositionBasedModel:
 
         self.gamma = gamma_t1
 
-    def simulate(self, int_res, epilson=0.0001):
+    def simulate(self, int_res, epsilon=0.1):
         '''One user click simulation with RCM.
         Arguments:
             int_res {list or ndarray} -- interleaved result
@@ -533,22 +534,22 @@ class PositionBasedModel:
         P = 0
         E = 0
         for i in np.arange(int_len):
-            rel = int_res[i] # relevance
+            rel = int_res[i]  # relevance
             if '1' in rel:
-                P_click = self.gamma[i] * (1 - epilson)
+                P_click = self.gamma[i] * (1 - epsilon)
                 if np.random.rand(1) < P_click:
                     if 'P' in int_res[i]:
                         P += 1
                     else:
                         E += 1
             elif '0' in rel:
-                P_click = self.gamma[i] * epilson
-                if np.random.rand(1) < (self.gamma[i] * epilson):
+                P_click = self.gamma[i] * epsilon
+                if np.random.rand(1) < (self.gamma[i] * epsilon):
                     if 'P' in int_res[i]:
                         P += 1
                     else:
                         E += 1
-        
+
         if E > P:
             return 1
         elif E == P:
@@ -670,7 +671,7 @@ def main():
     groupStatistics = getStatistics(groups, rcm)
     print('Group statistics: ')
     print(groupStatistics)
-    
+
     print('Position Based Model: ')
     pbm = PositionBasedModel()
     pbm.learn_by_EM()
@@ -678,6 +679,7 @@ def main():
     print('Group statistics: ')
     print(groupStatistics)
     print('Time elapsed: {:.3f}s'.format(time() - start))
+
 
 if __name__ == "__main__":
     main()
