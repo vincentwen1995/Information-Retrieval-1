@@ -143,7 +143,7 @@ def teamDraftInterleave(rankP, rankE, docP, docE):
                     if not P:
                         break
                 if P:
-                    interleavedList.append(str(P[0]) + 'P')
+                    interleavedList.append(str(int(P[0])) + 'P')
                     docIDs.append(dP[0])
                     P.pop(0)
                     dP.pop(0)
@@ -156,7 +156,7 @@ def teamDraftInterleave(rankP, rankE, docP, docE):
                     if not E:
                         break
                 if E:
-                    interleavedList.append(str(E[0]) + 'E')
+                    interleavedList.append(str(int(E[0])) + 'E')
                     docIDs.append(dE[0])
                     E.pop(0)
                     dE.pop(0)
@@ -168,7 +168,7 @@ def teamDraftInterleave(rankP, rankE, docP, docE):
                     if not E:
                         break
                 if E:
-                    interleavedList.append(str(E[0]) + 'E')
+                    interleavedList.append(str(int(E[0])) + 'E')
                     docIDs.append(dE[0])
                     E.pop(0)
                     dE.pop(0)
@@ -181,7 +181,7 @@ def teamDraftInterleave(rankP, rankE, docP, docE):
                     if not P:
                         break
                 if P:
-                    interleavedList.append(str(P[0]) + 'P')
+                    interleavedList.append(str(int(P[0])) + 'P')
                     docIDs.append(dP[0])
                     P.pop(0)
                     dP.pop(0)
@@ -240,7 +240,7 @@ def probInterleave(rankP, rankE, docP, docE):
                 for index in range(len(probDistP)):
                     temp += probDistP[index]
                     if pick < temp:
-                        interleavedList.append(str(P[index]) + 'P')
+                        interleavedList.append(str(int(P[index])) + 'P')
                         if dP[index] in dE:
                             tIndex = dE.index(dP[index])
                             E.pop(tIndex)
@@ -258,7 +258,7 @@ def probInterleave(rankP, rankE, docP, docE):
                 for index in range(len(probDistE)):
                     temp += probDistE[index]
                     if pick < temp:
-                        interleavedList.append(str(E[index]) + 'E')
+                        interleavedList.append(str(int(E[index])) + 'E')
                         if dE[index] in dP:
                             tIndex = dP.index(dE[index])
                             P.pop(tIndex)
@@ -533,15 +533,15 @@ class PositionBasedModel:
         P = 0
         E = 0
         for i in np.arange(int_len):
-            rel = int_len[i][0] # relevance
-            if rel == 1:
+            rel = int_res[i] # relevance
+            if '1' in rel:
                 P_click = self.gamma[i] * (1 - epilson)
                 if np.random.rand(1) < P_click:
                     if 'P' in int_res[i]:
                         P += 1
                     else:
                         E += 1
-            else:
+            elif '0' in rel:
                 P_click = self.gamma[i] * epilson
                 if np.random.rand(1) < (self.gamma[i] * epilson):
                     if 'P' in int_res[i]:
