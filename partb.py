@@ -1,5 +1,6 @@
 from itertools import permutations
 from time import time
+from scipy.stats import norm
 import numpy as np
 import random as rn
 
@@ -353,8 +354,8 @@ class RandomClickModel:
 
         p1 = E / (E + P)
         delta = np.abs(p1 - p0)
-        z_alpha = 1 / np.sqrt(2 * np.pi) * np.exp(-0.5 * (1 - alpha) ** 2)
-        z_beta = 1 / np.sqrt(2 * np.pi) * np.exp(-0.5 * (1 - beta) ** 2)
+        z_alpha = norm.ppf(1 - alpha)
+        z_beta = norm.ppf(1 - beta)
         if delta == 0.0:
             N = 0
         else:
@@ -507,8 +508,6 @@ class PositionBasedModel:
                     gamma_sum += (c_us + (1 - c_us) * gamma_t[rank] * (1 - alpha_t[uq]) / (1 - gamma_t[rank] * alpha_t[uq]))
                 gamma_t1[rank] = (gamma_sum + 1) / (length_S + 2)
 
-            print(gamma_t1)
-
             total_diff = np.sum(gamma_t1 - gamma_t)
 
             # update values at t using values at t+1
@@ -517,7 +516,7 @@ class PositionBasedModel:
 
         self.gamma = gamma_t1
 
-    def simulate(self, int_res, epsilon=0.1):
+    def simulate(self, int_res, epsilon=0.3):
         '''One user click simulation with RCM.
         Arguments:
             int_res {list or ndarray} -- interleaved result
@@ -544,7 +543,7 @@ class PositionBasedModel:
                         E += 1
             elif '0' in rel:
                 P_click = self.gamma[i] * epsilon
-                if np.random.rand(1) < (self.gamma[i] * epsilon):
+                if np.random.rand(1) < P_click:
                     if 'P' in int_res[i]:
                         P += 1
                     else:
@@ -580,8 +579,8 @@ class PositionBasedModel:
 
         p1 = E / (E + P)
         delta = np.abs(p1 - p0)
-        z_alpha = 1 / np.sqrt(2 * np.pi) * np.exp(-0.5 * (1 - alpha) ** 2)
-        z_beta = 1 / np.sqrt(2 * np.pi) * np.exp(-0.5 * (1 - beta) ** 2)
+        z_alpha = norm.ppf(1 - alpha)
+        z_beta = norm.ppf(1 - beta)
         if delta == 0.0:
             N = 0
         else:
@@ -589,12 +588,13 @@ class PositionBasedModel:
         return np.ceil(N)
 
 
-def getStatistics(groups, clickModel, alpha=0.05, beta=0.1, p0=0.5, repetition=50):
+def getStatistics(groups, clickModel, interleaving, alpha=0.05, beta=0.1, p0=0.5, repetition=50):
     '''Calculate statistics for each groups of ranking pairs.
 
     Arguments:
         groups {list} -- list of groups
         clickModel {RandomClickModel or PositionBasedModel} -- instance of either click model
+        interleaving {string} -- 
 
     Keyword Arguments:
         alpha {float} -- Type I error rate (default: {0.05})
@@ -605,13 +605,17 @@ def getStatistics(groups, clickModel, alpha=0.05, beta=0.1, p0=0.5, repetition=5
     Returns:
         list -- list of dictionaries containing statistics for each group
     '''
+    if 'teamdraft' in interleaving.lower():
+        interleave = teamDraftInterleave
+    else:
+        interleave = probInterleave
 
     groupStatistics = []
     for group in groups:
         # tmpN = np.empty(shape=(len(group)), dtype=np.float32)
         tmpN = []
         for pair in group:
-            int_res = teamDraftInterleave(pair['P'], pair['E'], pair['P_docID'], pair['E_docID'])
+            int_res = interleave(pair['P'], pair['E'], pair['P_docID'], pair['E_docID'])
             N = clickModel.computeSampleSize(alpha, beta, p0, repetition, int_res)
             if N == 0.0:
                 continue
@@ -633,7 +637,7 @@ def getStatistics(groups, clickModel, alpha=0.05, beta=0.1, p0=0.5, repetition=5
 
 
 def main():
-    DEBUG = True
+    DEBUG = False
     k = 3
     max_rel = 1
     docPerPage = 10
@@ -665,17 +669,17 @@ def main():
         print("Interleaved result with ProbInterleaving:", testPI)
         print(combinations.shape)
     start = time()
-    print('Random Click Model: ')
-    rcm = RandomClickModel(docPerPage)
-    rcm.estimateParameters(clickLog)
-    groupStatistics = getStatistics(groups, rcm)
-    print('Group statistics: ')
-    print(groupStatistics)
+    # print('Random Click Model: ')
+    # rcm = RandomClickModel(docPerPage)
+    # rcm.estimateParameters(clickLog)
+    # groupStatistics = getStatistics(groups, rcm, 'teamdraft')
+    # print('Group statistics: ')
+    # print(groupStatistics)
 
     print('Position Based Model: ')
     pbm = PositionBasedModel()
     pbm.learn_by_EM()
-    groupStatistics = getStatistics(groups, pbm)
+    groupStatistics = getStatistics(groups, pbm, 'prob')
     print('Group statistics: ')
     print(groupStatistics)
     print('Time elapsed: {:.3f}s'.format(time() - start))
