@@ -155,7 +155,7 @@ class PositionBasedModel:
 
         self.gamma = gamma_t1
 
-    def simulate(self, int_res):
+    def simulate(self, int_res, epilson=0.0001):
         '''One user click simulation with RCM.
         Arguments:
             int_res {list or ndarray} -- interleaved result
@@ -172,11 +172,22 @@ class PositionBasedModel:
         P = 0
         E = 0
         for i in np.arange(int_len):
-            if np.random.rand(1) < self.gamma[i]:
-                if 'P' in int_res[i]:
-                    P += 1
-                else:
-                    E += 1
+            rel = int_len[i][0] # relevance
+            if rel == 1:
+                P_click = self.gamma[i] * (1 - epilson)
+                if np.random.rand(1) < P_click:
+                    if 'P' in int_res[i]:
+                        P += 1
+                    else:
+                        E += 1
+            else:
+                P_click = self.gamma[i] * epilson
+                if np.random.rand(1) < (self.gamma[i] * epilson):
+                    if 'P' in int_res[i]:
+                        P += 1
+                    else:
+                        E += 1
+        
         if E > P:
             return 1
         elif E == P:
