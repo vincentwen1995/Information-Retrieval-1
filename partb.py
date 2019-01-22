@@ -615,6 +615,14 @@ def getStatistics(groups, clickModel, interleaving, alpha=0.05, beta=0.1, p0=0.5
 
     groupStatistics = []
     for group in tqdm(groups, desc='Computing statistics for each group...', ascii=True):
+        groupStatistics.append(dict())
+        tmp = groupStatistics[-1]
+        if len(group) == 0:
+            tmp['min'] = 'Nan'
+            tmp['max'] = 'Nan'
+            tmp['mean'] = 'Nan'
+            tmp['median'] = 'Nan'
+            continue
         tmpN = []
         for pair in group:
             int_res = interleave(pair['P'], pair['E'], pair['P_docID'], pair['E_docID'])
@@ -623,18 +631,10 @@ def getStatistics(groups, clickModel, interleaving, alpha=0.05, beta=0.1, p0=0.5
                 continue
             tmpN.append(N)
         tmpN = np.array(tmpN)
-        groupStatistics.append(dict())
-        tmp = groupStatistics[-1]
-        if len(group) == 0:
-            tmp['min'] = 'Nan'
-            tmp['max'] = 'Nan'
-            tmp['mean'] = 'Nan'
-            tmp['median'] = 'Nan'
-        else:
-            tmp['min'] = np.min(tmpN)
-            tmp['max'] = np.max(tmpN)
-            tmp['mean'] = np.mean(tmpN)
-            tmp['median'] = np.median(tmpN)
+        tmp['min'] = np.min(tmpN)
+        tmp['max'] = np.max(tmpN)
+        tmp['mean'] = np.mean(tmpN)
+        tmp['median'] = np.median(tmpN)
     return groupStatistics
 
 
