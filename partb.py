@@ -1,6 +1,7 @@
 from itertools import permutations
 from time import time
 from scipy.stats import norm
+from tqdm import tqdm
 import numpy as np
 import random as rn
 
@@ -287,6 +288,7 @@ class RandomClickModel:
 
         '''
 
+        print('Parameter estimation for RCM.')
         q = 0
         c = 0
         with open(clickLog) as log:
@@ -419,7 +421,7 @@ class PositionBasedModel:
 
                 for r in range(max_rank):  # for rank from 1 until max_rank
                     query_id = record[3]
-                    doc_id = record[r+5]
+                    doc_id = record[r + 5]
                     key = (doc_id, query_id)
 
                     rank = r
@@ -465,6 +467,7 @@ class PositionBasedModel:
             gamma_t1: A np.arrayupdated, with max_rank = 3.
         '''
 
+        print('Parameter estimation for PBM.')
         # get data structure
         S_uq, S = self.preprocessing()
 
@@ -472,8 +475,8 @@ class PositionBasedModel:
         all_uq = list(S_uq.keys())
 
         # initialize gamma
-        gamma_t = np.array([gamma_0]*max_rank)
-        gamma_t1 = np.array([0.9]*max_rank)
+        gamma_t = np.array([gamma_0] * max_rank)
+        gamma_t1 = np.array([0.9] * max_rank)
 
         # init alpha
         alpha_t = {}
@@ -594,7 +597,7 @@ def getStatistics(groups, clickModel, interleaving, alpha=0.05, beta=0.1, p0=0.5
     Arguments:
         groups {list} -- list of groups
         clickModel {RandomClickModel or PositionBasedModel} -- instance of either click model
-        interleaving {string} -- 
+        interleaving {string} -- interleaving method, 'teamdraft' or 'prob' 
 
     Keyword Arguments:
         alpha {float} -- Type I error rate (default: {0.05})
@@ -611,8 +614,7 @@ def getStatistics(groups, clickModel, interleaving, alpha=0.05, beta=0.1, p0=0.5
         interleave = probInterleave
 
     groupStatistics = []
-    for group in groups:
-        # tmpN = np.empty(shape=(len(group)), dtype=np.float32)
+    for group in tqdm(groups, desc='Computing statistics for each group...', ascii=True):
         tmpN = []
         for pair in group:
             int_res = interleave(pair['P'], pair['E'], pair['P_docID'], pair['E_docID'])
@@ -648,9 +650,6 @@ def main():
     repetition = 50
     docs = 6
 
-    # docIDs = np.arange(docs)
-    # rels = np.arange(max_rel + 1)
-    # combinations = np.array(np.meshgrid(rels, rels, rels, docIDs, docIDs, docIDs)).T.reshape(-1, 6)
     combinations = getCombinations(docs, k)
     combinations = appendERR(combinations, k, max_rel)
     rankingPairs = getRankingPairs(combinations, k)
