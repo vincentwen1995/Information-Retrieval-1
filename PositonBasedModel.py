@@ -7,7 +7,7 @@ class PositionBasedModel:
     def __init__(self):
         self.gamma = 0
 
-    def preprocessing(self, max_rank=3, file_path="YandexRelPredChallenge.txt"):
+    def preprocessing(self, max_rank=3, file_path="./YandexRelPredChallenge.txt"):
         '''Preprocessing Yandex log.
 
         Preprocess Yandex log to get convient data structures S_uq and S for
