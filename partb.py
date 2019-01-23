@@ -70,10 +70,19 @@ def getRankingPairs(combinations, k):
     '''
 
     rankingPairs = []
+    temp = []
     for P_ind in np.arange(combinations.shape[0]):
         for E_ind in np.arange(combinations.shape[0]):
             DERR = combinations[E_ind, -1] - combinations[P_ind, -1]
-            if DERR > 0:
+            diff = []
+            for i in range(len(combinations[P_ind, 0:k])):
+                if combinations[P_ind, k:k + k][i] == combinations[E_ind, k:k + k][i]:
+                    diff.append('T')
+                else:
+                    diff.append('E')
+            inList = str(combinations[P_ind, 0:k]) + str(combinations[E_ind, 0:k]) + str(diff)
+            if (inList not in temp) and DERR > 0:
+                temp.append(inList)
                 rankingPairs.append(dict())
                 tmp_pair = rankingPairs[-1]
                 tmp_pair["P"] = combinations[P_ind, 0:k]
@@ -617,10 +626,9 @@ def getStatistics(groups, clickModel, interleaving, alpha=0.05, beta=0.1, p0=0.5
         groupStatistics.append(dict())
         tmp = groupStatistics[-1]
         if len(group) == 0:
-            tmp['min'] = 'Nan'
-            tmp['max'] = 'Nan'
-            tmp['mean'] = 'Nan'
-            tmp['median'] = 'Nan'
+            tmp['min'] = 'N/A'
+            tmp['median'] = 'N/A'
+            tmp['max'] = 'N/A'
             continue
         tmpN = []
         for pair in group:
@@ -631,9 +639,8 @@ def getStatistics(groups, clickModel, interleaving, alpha=0.05, beta=0.1, p0=0.5
             tmpN.append(N)
         tmpN = np.array(tmpN)
         tmp['min'] = np.min(tmpN)
-        tmp['max'] = np.max(tmpN)
-        tmp['mean'] = np.mean(tmpN)
         tmp['median'] = np.median(tmpN)
+        tmp['max'] = np.max(tmpN)
     return groupStatistics
 
 
@@ -655,80 +662,63 @@ def main():
     groups = getBins(rankingPairs)
 
     if DEBUG:
-        # count = 0
-        # for i in np.arange(len(groups)):
-        #     print('Group {} has {} pairs.'.format(i + 1, len(groups[i])))
-        #     count += len(groups[i])
-        # print("In total {} pairs:".format(count))
-        # print("Example pair:", groups[0][4])
-        # testTDI = teamDraftInterleave(groups[0][4].get('P'), groups[0][4].get('E'), groups[0][4].get('P_docID'), groups[0][4].get('E_docID'))
-        # print("Interleaved result with TeamDraftInterleaving:", testTDI)
-        # testPI = probInterleave(groups[0][4].get('P'), groups[0][4].get('E'), groups[0][4].get('P_docID'), groups[0][4].get('E_docID'))
-        # print("Interleaved result with ProbInterleaving:", testPI)
-        # print(combinations.shape)
-        start = time()
-        print('Position Based Model: ')
-        print('Processing...')
-        pbm = PositionBasedModel()
-        print('Parameter estimation...')
-        pbm.learn_by_EM()
+        count = 0
+        for i in np.arange(len(groups)):
+            print('Group {} has {} pairs.'.format(i + 1, len(groups[i])))
+            count += len(groups[i])
+        print("In total {} pairs:".format(count))
+        print("Example pair:", groups[0][4])
+        testTDI = teamDraftInterleave(groups[0][4].get('P'), groups[0][4].get('E'), groups[0][4].get('P_docID'), groups[0][4].get('E_docID'))
+        print("Interleaved result with TeamDraftInterleaving:", testTDI)
+        testPI = probInterleave(groups[0][4].get('P'), groups[0][4].get('E'), groups[0][4].get('P_docID'), groups[0][4].get('E_docID'))
+        print("Interleaved result with ProbInterleaving:", testPI)
 
-        print('Probabilistic interleaving: ')
-        groupStatisticsPBM = getStatistics(groups, pbm, 'prob')
-        print('Done!')
-        print('Group statistics: ')
-        for i in np.arange(len(groupStatisticsPBM)):
-            print('Sample size estimation of group', i + 1, ':')
-            print(groupStatisticsPBM[i])
+    start = time()
+    print('Random Click Model: ')
+    print('Processing...')
+    rcm = RandomClickModel(docPerPage)
+    print('Parameter estimation...')
+    rcm.estimateParameters(clickLog)
 
-        print('Time elapsed: {:.3f}s'.format(time() - start))
+    print('Team-draft interleaving: ')
+    groupStatisticsRCM = getStatistics(groups, rcm, 'teamdraft')
+    print('Done!')
+    print('Group statistics: ')
+    for i in np.arange(len(groupStatisticsRCM)):
+        print('Sample size estimation of group', i + 1, ':')
+        print(groupStatisticsRCM[i])
 
-    # start = time()
-    # print('Random Click Model: ')
-    # print('Processing...')
-    # rcm = RandomClickModel(docPerPage)
-    # print('Parameter estimation...')
-    # rcm.estimateParameters(clickLog)
+    print('Probabilistic interleaving: ')
+    groupStatisticsRCM = getStatistics(groups, rcm, 'prob')
+    print('Done!')
+    print('Group statistics: ')
+    for i in np.arange(len(groupStatisticsRCM)):
+        print('Sample size estimation of group', i + 1, ':')
+        print(groupStatisticsRCM[i])
 
-    # print('Team-draft interleaving: ')
-    # groupStatisticsRCM = getStatistics(groups, rcm, 'teamdraft')
-    # print('Done!')
-    # print('Group statistics: ')
-    # for i in np.arange(len(groupStatisticsRCM)):
-    #     print('Sample size estimation of group', i + 1, ':')
-    #     print(groupStatisticsRCM[i])
+    print('Position Based Model: ')
+    print('Processing...')
+    pbm = PositionBasedModel()
+    print('Parameter estimation...')
+    pbm.learn_by_EM()
 
-    # print('Probabilistic interleaving: ')
-    # groupStatisticsRCM = getStatistics(groups, rcm, 'prob')
-    # print('Done!')
-    # print('Group statistics: ')
-    # for i in np.arange(len(groupStatisticsRCM)):
-    #     print('Sample size estimation of group', i + 1, ':')
-    #     print(groupStatisticsRCM[i])
+    print('Team-draft interleaving: ')
+    groupStatisticsPBM = getStatistics(groups, pbm, 'teamdraft')
+    print('Done!')
+    print('Group statistics: ')
+    for i in np.arange(len(groupStatisticsPBM)):
+        print('Sample size estimation of group', i + 1, ':')
+        print(groupStatisticsPBM[i])
 
-    # print('Position Based Model: ')
-    # print('Processing...')
-    # pbm = PositionBasedModel()
-    # print('Parameter estimation...')
-    # pbm.learn_by_EM()
+    print('Probabilistic interleaving: ')
+    groupStatisticsPBM = getStatistics(groups, pbm, 'prob')
+    print('Done!')
+    print('Group statistics: ')
+    for i in np.arange(len(groupStatisticsPBM)):
+        print('Sample size estimation of group', i + 1, ':')
+        print(groupStatisticsPBM[i])
 
-    # print('Team-draft interleaving: ')
-    # groupStatisticsPBM = getStatistics(groups, pbm, 'teamdraft')
-    # print('Done!')
-    # print('Group statistics: ')
-    # for i in np.arange(len(groupStatisticsPBM)):
-    #     print('Sample size estimation of group', i + 1, ':')
-    #     print(groupStatisticsPBM[i])
-
-    # print('Probabilistic interleaving: ')
-    # groupStatisticsPBM = getStatistics(groups, pbm, 'prob')
-    # print('Done!')
-    # print('Group statistics: ')
-    # for i in np.arange(len(groupStatisticsPBM)):
-    #     print('Sample size estimation of group', i + 1, ':')
-    #     print(groupStatisticsPBM[i])
-
-    # print('Time elapsed: {:.3f}s'.format(time() - start))
+    print('Time elapsed: {:.3f}s'.format(time() - start))
 
 
 if __name__ == "__main__":
