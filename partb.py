@@ -362,7 +362,7 @@ class ClickModel:
         '''
 
         groupStatistics = []
-        for group in tqdm(groups, desc='Computing statistics for each group...', ascii=True, total=100):
+        for group in tqdm(groups, desc='Computing statistics for each group...', ascii=True):
             groupStatistics.append(dict())
             tmp = groupStatistics[-1]
             if len(group) == 0:
@@ -593,7 +593,7 @@ class PositionBasedModel(ClickModel):
 
         self.gamma = gamma_t1
 
-    def simulate(self, int_res, epsilon=0.2):
+    def simulate(self, int_res, epsilon=0.1):
         '''One user click simulation with RCM.
         Arguments:
             int_res {list or ndarray} -- interleaved result
